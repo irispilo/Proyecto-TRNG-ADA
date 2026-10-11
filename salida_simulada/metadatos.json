@@ -1,0 +1,33 @@
+{
+  "fecha": "2026-10-11T11:53:46",
+  "fuente": "Simulación (sin hardware)",
+  "info_fuente": "SIMULADO | sensores=3 | sigma=0.3 LSB",
+  "cantidad_numeros": 160000,
+  "bits_por_numero": 32,
+  "entropia_calibracion": {
+    "bits_analizados": 200000,
+    "proporcion_unos": 0.512855,
+    "h_mcv": 0.9553006261288405,
+    "h_markov": 0.7964146204615408,
+    "h_min": 0.7964146204615408
+  },
+  "acondicionador": {
+    "algoritmo": "SHA-256(contador || bloque_crudo)",
+    "bytes_crudos_por_bloque": 51,
+    "bits_salida_por_bloque": 256,
+    "bloques_generados": 20032,
+    "bloques_descartados_por_salud": 0
+  },
+  "pruebas_salud": {
+    "corte_rct": 39,
+    "corte_apt": 684,
+    "ventana_apt": 1024,
+    "bits_revisados": 8173056,
+    "fallos_rct": 0,
+    "fallos_apt": 0
+  },
+  "bits_crudos_totales": 8373056,
+  "tiempo_total_s": 1.04,
+  "tasa_numeros_por_s": 153958.8,
+  "eficiencia_bits_salida_por_bit_crudo": 0.6115
+}
