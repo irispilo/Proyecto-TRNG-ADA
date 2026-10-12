@@ -7,11 +7,11 @@ Arduino Uno.
 ## Idea
 
 Toda lectura de un convertidor analógico-digital (ADC) trae ruido: térmico, de cuantización,
-interferencia electromagnética de la red, variaciones de luz y de sonido. Los bits altos de una
+interferencia electromagnética de la red y variaciones de luz. Los bits altos de una
 lectura siguen a la señal y son predecibles, pero el bit menos significativo (LSB) cambia
-prácticamente al azar con ese ruido. El Arduino lee tres sensores, toma el LSB de cada lectura
-y los combina con XOR. Ese flujo de bits crudos se envía por USB a Python, donde se evalúa y
-se acondiciona.
+prácticamente al azar con ese ruido. El Arduino lee tres sensores (una fotoresistencia y dos
+antenas), toma el LSB de cada lectura y los combina con XOR. Ese flujo de bits crudos se envía
+por USB a Python, donde se evalúa y se acondiciona.
 
 La arquitectura sigue el modelo de NIST SP 800-90B:
 
@@ -32,8 +32,22 @@ Sensores ─► ADC ─► LSB ⊕ ─► bits crudos ─► pruebas de salud �
 | Pin | Sensor | Conexión |
 |-----|--------|----------|
 | A0 | Fotoresistencia (LDR) | 5V → LDR → A0 → resistencia 10 kΩ → GND |
-| A1 | Antena | cable de 15–20 cm en A1, el otro extremo libre |
-| A2 | Micrófono KY-038 | AO → A2, + → 5V, G → GND |
+| A1 | Antena 1 | cable de 15–20 cm en A1, el otro extremo libre |
+| A2 | Antena 2 | cable jumper en A2, el otro extremo libre y separado de la antena 1 |
+
+El diseño original contemplaba un micrófono KY-038 en A2; al no tenerlo, se reemplazó por una
+segunda antena, sin cambios en el código. Un pin conectado solo a un cable suelto queda
+flotante, y el cable capta el campo eléctrico de la instalación de la casa: la onda de 60 Hz
+que se ve en `fig_00_senales_sensores.png`, con periodo de unos 16.7 ms. Esa onda es
+predecible y por eso no se usa; lo que se aprovecha es el temblor del último bit encima de ella.
+
+Como las dos antenas captan la misma onda de la red, sus lecturas completas están muy
+correlacionadas (0.98 en `senales.csv`), pero sus bits menos significativos no lo están: la
+correlación entre los LSB de A1 y A2 es prácticamente cero (|r| < 0.03). La fotoresistencia,
+con la luz estable del cuarto, apenas oscila entre 316 y 321, pero su LSB también alterna entre
+0 y 1. De todas formas la min-entropía se estima sobre el flujo ya combinado, así
+que el tamaño de los bloques que se pasan a SHA-256 se ajusta a lo que realmente aportan los
+tres sensores.
 
 El ADC trabaja con prescaler 32 (unos 26 µs por lectura) y el puerto serial a 500,000 baudios.
 
@@ -58,8 +72,8 @@ proyecto_trng/
 
 ## Resultados
 
-El lote de `python/salida/` se generó el 11 de octubre de 2026 con el Arduino Uno y los tres
-sensores conectados.
+El lote de `python/salida/` se generó el 11 de octubre de 2026 con el Arduino Uno, la
+fotoresistencia y las dos antenas.
 
 | Medida | Valor |
 |--------|-------|

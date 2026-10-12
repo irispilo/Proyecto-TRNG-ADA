@@ -19,7 +19,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-NOMBRES = ["A0 · Fotoresistencia", "A1 · Antena (pin flotante)", "A2 · Micrófono"]
+NOMBRES = ["A0 · Fotoresistencia", "A1 · Antena 1 (pin flotante)", "A2 · Antena 2 (pin flotante)"]
 COLORES = ["#2a78d6", "#d6602a", "#2aa876"]
 
 

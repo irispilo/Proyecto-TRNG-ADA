@@ -18,15 +18,14 @@
  *  "crudos" que se envía por USB a Python, donde se evalúa su calidad
  *  (pruebas de salud) y se acondiciona criptográficamente (SHA-256).
  *
- *  CONEXIONES (mínimo un sensor; recomendado dos o tres)
- *  -----------------------------------------------------
+ *  CONEXIONES
+ *  ----------
  *   A0  Fotoresistencia (LDR) en divisor de voltaje:
  *         5V ── LDR ──┬── 10 kΩ ── GND
  *                     └── A0
- *   A1  "Antena": un cable de 15–20 cm conectado a A1 y libre en el
+ *   A1  Antena 1: un cable de 15–20 cm conectado a A1 y libre en el
  *       otro extremo (capta ruido electromagnético del ambiente).
- *   A2  (Opcional) Módulo de sonido KY-038 / KY-037, salida AO -> A2,
- *       VCC -> 5V, GND -> GND.
+ *   A2  Antena 2: otro cable suelto en A2, separado del de A1.
  *
  *  PROTOCOLO SERIAL (500000 baudios)
  *  ---------------------------------
@@ -37,7 +36,7 @@
  * ================================================================
  */
 
-const uint8_t PINES[] = {A0, A1, A2};   // quita A2 si no tienes sensor de sonido
+const uint8_t PINES[] = {A0, A1, A2};   // fotoresistencia, antena 1, antena 2
 const uint8_t NUM_PINES = sizeof(PINES) / sizeof(PINES[0]);
 const long    BAUDIOS = 500000;
 const uint8_t TAM_BUFFER = 32;           // bytes que se envían en bloque
