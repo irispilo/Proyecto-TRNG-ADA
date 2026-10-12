@@ -1,40 +1,4 @@
-/*
- * ================================================================
- *  Generador de entropía física — Arduino Uno
- *  Proyecto: Sistema de generación de números aleatorios (TRNG)
- *  Curso: Diseño y Análisis de Algoritmos
- * ================================================================
- *
- *  IDEA
- *  ----
- *  Todo convertidor analógico-digital (ADC) tiene ruido: térmico,
- *  de cuantización, interferencia electromagnética (60 Hz de la red),
- *  fluctuaciones de luz, sonido ambiente... Los bits MÁS ALTOS de una
- *  lectura son predecibles (dependen de la señal), pero el BIT MENOS
- *  SIGNIFICATIVO (LSB) cambia casi al azar con ese ruido.
- *
- *  Este sketch lee varios sensores externos, toma el LSB de cada
- *  lectura y los combina con XOR. El resultado es un flujo de bits
- *  "crudos" que se envía por USB a Python, donde se evalúa su calidad
- *  (pruebas de salud) y se acondiciona criptográficamente (SHA-256).
- *
- *  CONEXIONES
- *  ----------
- *   A0  Fotoresistencia (LDR) en divisor de voltaje:
- *         5V ── LDR ──┬── 10 kΩ ── GND
- *                     └── A0
- *   A1  Antena 1: un cable de 15–20 cm conectado a A1 y libre en el
- *       otro extremo (capta ruido electromagnético del ambiente).
- *   A2  Antena 2: otro cable suelto en A2, separado del de A1.
- *
- *  PROTOCOLO SERIAL (500000 baudios)
- *  ---------------------------------
- *   'B' -> inicia flujo binario de bits crudos (8 bits por byte)
- *   'S' -> inicia flujo de señales en texto: "t_us,a0,a1,a2\n"
- *   'X' -> detiene cualquier flujo
- *   'I' -> imprime información de configuración
- * ================================================================
- */
+
 
 const uint8_t PINES[] = {A0, A1, A2};   // fotoresistencia, antena 1, antena 2
 const uint8_t NUM_PINES = sizeof(PINES) / sizeof(PINES[0]);
