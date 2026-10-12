@@ -142,6 +142,89 @@ cráteres que la del TRNG.
 | `anim_randu_3d.gif` | animación de los tríos de RANDU en 3D |
 | `reporte.html` | reporte completo con tablas y gráficas |
 
+## Operación durante un año
+
+Este proyecto funciona como piloto. Midió el rendimiento real del sistema y mostró sus puntos
+débiles, y con esos datos se diseña la versión que operaría de forma continua durante un año.
+
+### Lo que dejó el piloto
+
+| Demostró | Reveló |
+|----------|--------|
+| 220 números por segundo con un Arduino | La protoboard es frágil: la fotoresistencia no funcionó hasta reubicar los cables de alimentación |
+| Min-entropía de 0.842 bits por bit crudo | Con la luz estable de un cuarto, la fotoresistencia aporta poco |
+| 0 alarmas de salud y 17/17 pruebas aprobadas | Las antenas dependen de la red eléctrica: sin ella desaparece la onda de 60 Hz |
+| Costo de energía de unos Q0.01 por lote | Una laptop no es adecuada para operar 24/7 |
+
+### Sistema
+
+```
+Sensores ─► Arduino ─USB─► Raspberry Pi (servicio 24/7) ─► archivos diarios + reportes
+                                   │
+                         UPS (respaldo de energía)
+```
+
+**Hardware.** Una Raspberry Pi reemplaza a la laptop: consume unos 5 W en lugar de unos 30 W y
+puede quedar encendida todo el año. El circuito pasa de la protoboard a una placa perforada
+soldada, dentro de una caja y con las antenas fijas, porque en el piloto mover un cable
+cambiaba la señal. Un UPS evita que un corte de luz detenga el sistema, y se mantiene un
+Arduino con sensores de repuesto.
+
+**Software.** El código del piloto se mantiene, con cinco cambios de operación:
+
+1. **Servicio automático:** arranca al encender la Raspberry Pi y se reinicia si falla.
+2. **Alarmas con aviso:** las pruebas de salud ya descartan bloques defectuosos; si una alarma
+   se repite, el sistema detiene la salida y envía una notificación.
+3. **Entropía medida cada hora,** no solo al inicio, porque el ambiente cambia durante el año
+   (día y noche, aparatos encendidos, cortes de luz).
+4. **Validación diaria:** las 17 pruebas y el verificador del curso sobre una muestra diaria de
+   160,000 números. A lo largo del año, los p-valores deberían distribuirse de forma uniforme.
+5. **Salida en binario, un archivo por día;** el CSV ocupa ocho veces más espacio.
+
+**Capacidad anual con un solo Arduino**
+
+| Medida | Valor |
+|--------|-------|
+| Números generados | unos 6,930 millones (≈ 43,000 lotes como el del piloto) |
+| Almacenamiento de los números en binario | 27.7 GB |
+| Bits crudos, si se guardaran todos | 42.7 GB (se guardan solo muestras) |
+
+**Si se necesitan más números** hay dos caminos. El lineal es conectar varios Arduinos a la
+misma Raspberry Pi; cada uno suma unos 220 números por segundo. El recomendado es un esquema
+híbrido: el TRNG produce semillas para un generador criptográfico determinista (DRBG, NIST
+SP 800-90A), que entrega millones de números por segundo y se vuelve a sembrar de forma
+continua. Es el mismo principio de `/dev/urandom` en Linux y de RDRAND en los procesadores
+Intel; con él, el límite pasa a ser la CPU y no los sensores.
+
+### Costos del primer año
+
+Energía calculada con la tarifa no social de EEGSA para agosto–octubre de 2026, Q1.51 por kWh
+([CNEE](https://cnee.gob.gt/wp-content/uploads/2026/07/Comunicado-CNEE-tarifas-trimestrales-agosto-a-octubre.pdf)).
+
+| Concepto | A: piloto tal cual (laptop) | B: sistema propuesto |
+|----------|-----------------------------|----------------------|
+| Computadora | Q0 (equipo existente) | Raspberry Pi 5: ~Q1,000 – Q2,414* |
+| Arduino y sensores | Q0 (equipo existente) | placa soldada y repuestos: Q150 – Q325 |
+| UPS | — | ~Q500 – Q800* |
+| Almacenamiento (128 GB) | — | ~Q150 – Q250* |
+| Energía en un año | 30 W × 8,760 h = 263 kWh → **Q397** | 5 W × 8,760 h = 44 kWh → **Q66** |
+| **Total del primer año** | **~Q400** (la laptop queda ocupada y se desgasta) | **~Q1,900 – Q3,900** |
+| Costo por millón de números | ~Q0.06 | ~Q0.27 – Q0.56 |
+
+\* Precios estimados. El de referencia es la Raspberry Pi 5 de 8 GB en Pacifiko (Q2,414); un
+modelo de 2 o 4 GB es suficiente y más barato.
+
+El costo principal es la inversión inicial; la operación cuesta unos Q66 al año de
+electricidad. Con el esquema híbrido, el mismo hardware produce órdenes de magnitud más
+números y el costo por número queda prácticamente en cero.
+
+### Siguiente fase
+
+Para operar un año, una fuente de ruido dedicada, como el ruido de avalancha de un transistor,
+sería más estable que las antenas, porque no depende de la red eléctrica ni del ambiente. Sus
+componentes son baratos, pero el circuito requiere un voltaje mayor (unos 12 V), por lo que
+queda como la siguiente fase del piloto.
+
 ## Cómo reproducirlo
 
 Requiere Python 3 y el sketch cargado en el Arduino Uno.
