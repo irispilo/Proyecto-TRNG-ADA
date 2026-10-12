@@ -1,0 +1,33 @@
+{
+  "fecha": "2026-10-11T18:11:02",
+  "fuente": "Arduino Uno (COM4)",
+  "info_fuente": "TRNG-ARDUINO v1 | sensores=3 | baudios=500000 | prescaler ADC=32",
+  "cantidad_numeros": 160000,
+  "bits_por_numero": 32,
+  "entropia_calibracion": {
+    "bits_analizados": 200000,
+    "proporcion_unos": 0.493935,
+    "h_mcv": 0.9744187601840953,
+    "h_markov": 0.842163420133433,
+    "h_min": 0.842163420133433
+  },
+  "acondicionador": {
+    "algoritmo": "SHA-256(contador || bloque_crudo)",
+    "bytes_crudos_por_bloque": 48,
+    "bits_salida_por_bloque": 256,
+    "bloques_generados": 20032,
+    "bloques_descartados_por_salud": 0
+  },
+  "pruebas_salud": {
+    "corte_rct": 37,
+    "corte_apt": 667,
+    "ventana_apt": 1024,
+    "bits_revisados": 7692288,
+    "fallos_rct": 0,
+    "fallos_apt": 0
+  },
+  "bits_crudos_totales": 7892288,
+  "tiempo_total_s": 727.8,
+  "tasa_numeros_por_s": 219.8,
+  "eficiencia_bits_salida_por_bit_crudo": 0.6487
+}
