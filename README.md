@@ -1,78 +1,146 @@
 # TRNG con Arduino Uno — 160,000 números aleatorios desde sensores físicos
 
-Proyecto del curso de Diseño y Análisis de Algoritmos.
+Proyecto 2 del curso Análisis y Diseño de Algoritmos: un generador de números aleatorios
+verdaderos (TRNG) que obtiene su entropía del ruido eléctrico de sensores conectados a un
+Arduino Uno.
+
+## Idea
+
+Toda lectura de un convertidor analógico-digital (ADC) trae ruido: térmico, de cuantización,
+interferencia electromagnética de la red, variaciones de luz y de sonido. Los bits altos de una
+lectura siguen a la señal y son predecibles, pero el bit menos significativo (LSB) cambia
+prácticamente al azar con ese ruido. El Arduino lee tres sensores, toma el LSB de cada lectura
+y los combina con XOR. Ese flujo de bits crudos se envía por USB a Python, donde se evalúa y
+se acondiciona.
+
+La arquitectura sigue el modelo de NIST SP 800-90B:
 
 ```
-proyecto_trng/
-├── arduino/generador_entropia/generador_entropia.ino   ← se carga en el Arduino
-├── python/
-│   ├── fuentes.py      lectura serial del Arduino (+ simulación para pruebas)
-│   ├── salud.py        estimación de entropía y pruebas de salud (NIST SP 800-90B)
-│   ├── generador.py    genera los 160,000 números  ← PROGRAMA PRINCIPAL
-│   ├── senales.py      captura/grafica las señales de los sensores (para el video)
-│   ├── nist.py         9 pruebas de la batería NIST SP 800-22
-│   ├── pruebas.py      pruebas clásicas + gráficas + reporte.html
-│   ├── crateres.py     aplicación: Luna simulada con los números (lo llama pruebas.py)
-│   └── animacion_randu.py  GIF del cubo 3D girando (escena 8 del video)
-├── requirements.txt
-└── salida_simulada/    ejemplo de resultados con la SIMULACIÓN (no usar para entregar)
+Sensores ─► ADC ─► LSB ⊕ ─► bits crudos ─► pruebas de salud ─► SHA-256 ─► números de 32 bits
 ```
 
-## 1. Armar el circuito (≈10 minutos)
+- **Estimación de entropía.** Antes de generar se calibra la fuente con 200,000 bits crudos,
+  usando los estimadores MCV y de Markov de SP 800-90B y quedándose con el mínimo.
+- **Pruebas de salud continuas.** Repetition Count Test y Adaptive Proportion Test sobre cada
+  bit crudo; detectan un sensor desconectado o una fuente que se quedó pegada.
+- **Acondicionamiento.** Cada bloque de 256 bits de salida es `SHA-256(contador || bloque_crudo)`.
+  El tamaño del bloque crudo se calcula para que contenga al menos 256 + 64 bits de entropía,
+  como pide SP 800-90B.
+
+## Circuito
 
 | Pin | Sensor | Conexión |
 |-----|--------|----------|
 | A0 | Fotoresistencia (LDR) | 5V → LDR → A0 → resistencia 10 kΩ → GND |
 | A1 | Antena | cable de 15–20 cm en A1, el otro extremo libre |
-| A2 | Micrófono KY-038 (opcional) | AO → A2, + → 5V, G → GND |
+| A2 | Micrófono KY-038 | AO → A2, + → 5V, G → GND |
 
-Si no tienes el micrófono, en el sketch cambia `{A0, A1, A2}` por `{A0, A1}`.
+El ADC trabaja con prescaler 32 (unos 26 µs por lectura) y el puerto serial a 500,000 baudios.
 
-## 2. Cargar el sketch
+## Estructura
 
-1. Abre `arduino/generador_entropia/generador_entropia.ino` en el Arduino IDE.
-2. Placa: **Arduino Uno**. Puerto: el que aparezca (COM3, /dev/ttyACM0…).
-3. Subir. **Cierra el Monitor Serie** después (si queda abierto, Python no puede usar el puerto).
-
-## 3. Instalar Python y dependencias
-
-```bash
-cd proyecto_trng
-pip install -r requirements.txt
+```
+proyecto_trng/
+├── arduino/generador_entropia/generador_entropia.ino   sketch del Arduino
+├── python/
+│   ├── fuentes.py          lectura serial del Arduino (y una fuente simulada para pruebas)
+│   ├── salud.py            estimación de entropía y pruebas de salud (SP 800-90B)
+│   ├── generador.py        genera los 160,000 números (programa principal)
+│   ├── senales.py          captura y grafica las señales de los sensores
+│   ├── nist.py             9 pruebas de la batería NIST SP 800-22
+│   ├── pruebas.py          pruebas clásicas, gráficas y reporte.html
+│   ├── crateres.py         aplicación: Luna simulada con los números
+│   ├── animacion_randu.py  GIF de los tríos de RANDU en 3D
+│   └── salida/             resultados del lote generado con el Arduino
+├── Verificador_TRNG.ipynb  notebook verificador del curso, con los resultados del lote
+└── requirements.txt
 ```
 
-## 4. Ejecutar
+## Resultados
 
-```bash
-cd python
-python senales.py   --puerto COM3 --segundos 5     # gráfica de los sensores (opcional, para el video)
-python generador.py --puerto COM3                  # ~12–15 min con 3 sensores
-python pruebas.py   --entrada salida               # ~30 s (incluye la Luna); abre salida/reporte.html
-python animacion_randu.py --entrada salida         # ~1 min; GIF para el video
-```
+El lote de `python/salida/` se generó el 11 de octubre de 2026 con el Arduino Uno y los tres
+sensores conectados.
 
-En macOS el puerto se ve como `/dev/cu.usbmodem1101`; en Linux `/dev/ttyACM0`
-(si da "permission denied": `sudo usermod -aG dialout $USER` y reinicia sesión).
+| Medida | Valor |
+|--------|-------|
+| Números generados | 160,000 enteros de 32 bits |
+| Tiempo total | 727.8 s (unos 12 minutos), 219.8 números por segundo |
+| Bits crudos capturados | 7,892,288 |
+| Min-entropía de la fuente cruda | 0.842 bits por bit crudo |
+| Bloques SHA-256 | 20,032, de 48 bytes crudos cada uno |
+| Alarmas de las pruebas de salud | 0 (RCT y APT) |
 
-Para probar el software sin el Arduino: `python generador.py --simulado`.
+### Pruebas estadísticas
 
-## Resultados que se generan en `salida/`
+`pruebas.py` aplica 17 pruebas a la salida del TRNG y, como comparación, a los bits crudos
+sin acondicionar, a Mersenne Twister y a RANDU:
+
+| Fuente | NIST SP 800-22 (9) | Pruebas clásicas (8) | Total |
+|--------|:---:|:---:|:---:|
+| **TRNG Arduino** | **9/9** | **8/8** | **17/17** |
+| Bits crudos (sin SHA-256) | 1/9 | 1/8 | 2/17 |
+| Mersenne Twister | 8/9 | 8/8 | 16/17 |
+| RANDU | 0/9 | 7/8 | 7/17 |
+
+Las pruebas clásicas son chi cuadrado de uniformidad, Kolmogorov–Smirnov, serial 2D y 3D,
+rachas arriba/abajo, Ljung–Box, huecos y póker. Las de NIST se corren sobre 50 secuencias de
+102,400 bits.
+
+Los bits crudos fallan casi todo: tienen sesgo y dependencia entre bits consecutivos, que es
+justo lo que corrige el acondicionamiento con SHA-256. RANDU pasa varias pruebas de
+uniformidad, pero falla la serial 3D porque sus tríos caen en 15 planos. El fallo aislado de
+Mersenne Twister (rango de matrices, proporción 0.94 contra un mínimo de 0.948) es el tipo de
+falso positivo esperable con α = 0.01.
+
+### Verificador del curso
+
+[Verificador_TRNG.ipynb](Verificador_TRNG.ipynb), con el rango declarado [0, 2³² − 1]:
+
+| Prueba | p-valor | Veredicto |
+|--------|:---:|:---:|
+| Chi cuadrado (uniformidad) | 0.3337 | PASA |
+| Rachas (orden) | 0.2449 | PASA |
+| Pares consecutivos | 0.8181 | PASA |
+
+La imagen de 400 × 400 píxeles y el mapa de pares consecutivos se ven como ruido uniforme, sin
+estructura, igual que la referencia.
+
+### Aplicación: cráteres lunares
+
+`crateres.py` usa los números para simular impactos sobre una Luna. De 53,333 tríos se aceptaron
+41,939 impactos (78.6 %, contra el valor teórico π/4 = 78.5 %). En la comparación
+(`fig_10_crateres_comparacion.png`), RANDU deja los cráteres alineados en diagonales, reflejo de
+que sus tríos caen en planos, y los bits crudos producen una superficie mucho más saturada de
+cráteres que la del TRNG.
+
+### Archivos en `python/salida/`
 
 | Archivo | Contenido |
 |---------|-----------|
-| `numeros.csv` | los 160,000 números (entero de 32 bits y su valor en [0,1)) |
-| `numeros.bin` | los mismos en binario, uint32 little-endian |
-| `crudo.bin` | todos los bits crudos del Arduino |
+| `numeros.csv` | los 160,000 números (entero de 32 bits y su valor en [0, 1)) |
+| `numeros.bin` | los mismos números en binario, uint32 little-endian |
+| `crudo.bin` | todos los bits crudos recibidos del Arduino |
 | `metadatos.json` | entropía medida, alarmas de salud, tiempo y tasa |
-| `resultados.json` | p-values de todas las pruebas |
-| `fig_00…fig_08.png` | gráficas de validación para el video y el documento |
-| `fig_09…fig_11.png` | la Luna simulada, la comparación con RANDU y la curva de tamaños |
+| `resultados.json` | p-valores de todas las pruebas |
+| `senales.csv`, `fig_00` | señales de los sensores |
+| `fig_01` … `fig_08` | gráficas de validación (histograma, mapa de bits, pares, tríos 3D, autocorrelación, caminata, Monte Carlo de π, NIST) |
+| `fig_09` … `fig_11` | Luna simulada, comparación con bits crudos y RANDU, y curva de tamaños |
+| `anim_randu_3d.gif` | animación de los tríos de RANDU en 3D |
 | `reporte.html` | reporte completo con tablas y gráficas |
 
-## Problemas comunes
+## Cómo reproducirlo
 
-- **"could not open port"**: cierra el Monitor Serie del Arduino IDE.
-- **"La fuente casi no tiene entropía"**: un sensor está mal conectado; revisa con `senales.py`.
-- **Muchas alarmas de salud**: un cable se soltó durante la captura.
-- **Una prueba aislada "falla"**: ver la nota del reporte; con α = 0.01 es esperable de vez en cuando.
-  Si quieres confirmarlo, vuelve a generar y a probar.
+Requiere Python 3 y el sketch cargado en el Arduino Uno.
+
+```bash
+pip install -r requirements.txt
+cd python
+python senales.py   --puerto COM4 --segundos 5   # señales de los sensores
+python generador.py --puerto COM4                # unos 12 minutos con 3 sensores
+python pruebas.py   --entrada salida             # pruebas, figuras y reporte.html
+python animacion_randu.py --entrada salida       # GIF de RANDU
+```
+
+`COM4` es el puerto en Windows; en Linux suele ser `/dev/ttyACM0` y en macOS
+`/dev/cu.usbmodem…`. El Monitor Serie del Arduino IDE debe estar cerrado, porque ocupa el puerto.
+`python generador.py --simulado` corre todo el flujo sin hardware, con una fuente simulada.
